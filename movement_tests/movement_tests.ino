@@ -1,10 +1,14 @@
 #include <AccelStepper.h>
 #include <PrintStream.h>
 #include <Vex.h>
+#include <Wire.h>
+#include <Adafruit_MotorShield.h>
+#include "utility/Adafruit_MS_PWMServoDriver.h"
 
 #define s1Control 12
 #define s2Control 13
 #define IRpin 3
+#define limSwitch 2
 
 // Number of steps per output rotation
 const int stepsPerRevolution = 200;
@@ -15,10 +19,10 @@ AccelStepper step2(AccelStepper::FULL4WIRE, 8, 9, 10, 11); // Defaults to AccelS
 IRObstacle ir(IRpin);
 
 // Robot
-Vex Robot;
+Adafruit_MotorShield shield = Adafruit_MotorShield(); 
 
-Adafruit_DCMotor *m1 = Robot.setMotor(1);
-Adafruit_DCMotor *m2 = Robot.setMotor(2);
+Adafruit_DCMotor *m1 = shield.getMotor(1);
+Adafruit_DCMotor *m2 = shield.getMotor(2);
 
 unsigned long past = 0;
 bool ran = true;
@@ -76,7 +80,7 @@ void speed(double speed, double timeSec) {
 }
 
 void homeSteppers() {
-  while (!ir.isObstacle()) {
+  while (digitalRead(limSwitch) != HIGH) {
     speed(-50);
     run(); 
   }
@@ -87,12 +91,28 @@ void homeSteppers() {
   delay(1000);
 }
 
+void moveTank(double p1 = 100, double p2 = 100) {
+  m1->setSpeed(map(p1, 0, 100, 0, 255));
+  m2->setSpeed(map(p2, 0, 100, 0, 255));
+
+  if (p1 >= 0) {
+    m1->run(FORWARD);
+  } else {
+    m1->run(BACKWARD);
+  }
+
+  if (p2 >= 0) {
+    m2->run(FORWARD);
+  } else {
+    m2->run(BACKWARD);
+  }
+}
 
 void setup() {
 
 	Serial.begin(9600);
 
-  Robot.begin();
+  shield.begin();
   ir.begin();
 
   step1.setMaxSpeed(200);
@@ -103,6 +123,7 @@ void setup() {
 
   pinMode(s1Control, OUTPUT);
   pinMode(s2Control, OUTPUT);
+  pinMode(limSwitch, INPUT);
 
   Serial << "Hey!! Lets go!" << endl;
   delay(5000);
@@ -115,10 +136,12 @@ void loop() {
   //   step2.runSpeed();
   // }
 
-
-  // Robot.moveMotor(m2, 100, 5);
-  Robot.moveTank(m1, m2, 100, 100, 5);
+  moveTank();
   delay(1500);
+  moveTank(100, 50);
+  delay(1500);
+  moveTank(0, 0);
+  delay(2500);
 
   // VERSION 1: move cont. with certain time
   speed(stepsPerRevolution, 2);
