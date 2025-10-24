@@ -1,6 +1,10 @@
 import numpy as np
 import cv2
 
+import mediapipe as mpgit 
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+
 # Hold the background frame for background subtraction.
 background = None
 # Hold the hand's data so all its details are in one place.
